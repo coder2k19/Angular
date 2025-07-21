@@ -48,6 +48,10 @@ const DataTable = memo(({
   enableFacetedValues = false,
   enableGlobalFilterModes = false,
   enableColumnFilterModes = false,
+  // Pagination props
+  paginationDisplayMode = "pages",
+  pageSize = 10,
+  pageSizeOptions = [5, 10, 20, 50],
 }) => {
   // Memoize processed columns to prevent unnecessary recalculations
   const columns = useMemo(() => {
@@ -71,7 +75,10 @@ const DataTable = memo(({
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
-  // Removed pagination state since pagination is disabled
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: pageSize,
+  });
 
   // Memoize storage key functions
   const storageKeys = useMemo(() => {
@@ -302,7 +309,25 @@ const DataTable = memo(({
       }),
     },
 
-    // Bottom toolbar disabled since pagination is disabled
+    // Bottom toolbar for pagination
+    muiBottomToolbarProps: enablePagination ? {
+      sx: {
+        boxShadow: "none",
+        backgroundColor: theme.palette.common.white,
+        minHeight: minHgt || "3rem",
+        "& .MuiTablePagination-root": {
+          fontSize: "14px",
+        },
+        "& .MuiTablePagination-selectLabel": {
+          fontSize: "14px",
+          fontWeight: 500,
+        },
+        "& .MuiTablePagination-displayedRows": {
+          fontSize: "14px",
+          fontWeight: 500,
+        },
+      },
+    } : undefined,
 
     muiTableBodyCellProps: {
       sx: {
@@ -377,18 +402,33 @@ const DataTable = memo(({
         </Typography>
       )}
       
-      {/* Data statistics with search results */}
-      <Box display="flex" gap={2} alignItems="center">
+      {/* Data statistics with search results and pagination info */}
+      <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
         <Typography variant="caption" sx={{
           color: theme.palette.text.secondary,
           fontSize: "12px",
           pl: 1
         }}>
-          {globalFilter ? 
-            `Showing ${filteredData.length} of ${tableData.length} records` :
-            `Showing ${tableData.length} records`
-          }
+          {enablePagination ? (
+            // Show pagination-style info
+            `Total: ${globalFilter ? filteredData.length : tableData.length} records`
+          ) : (
+            // Show regular info
+            globalFilter ? 
+              `Showing ${filteredData.length} of ${tableData.length} records` :
+              `Showing ${tableData.length} records`
+          )}
         </Typography>
+        
+        {enablePagination && (
+          <Typography variant="caption" sx={{
+            color: theme.palette.info.main,
+            fontSize: "12px",
+            fontWeight: 500,
+          }}>
+            {`${pagination.pageSize} rows per page`}
+          </Typography>
+        )}
         
         {globalFilter && (
           <Typography variant="caption" sx={{
@@ -437,7 +477,7 @@ const DataTable = memo(({
       )}
       {renderCustomActions && renderCustomActions()}
     </Box>
-  ), [subTitle, tableData.length, filteredData.length, globalFilter, enableColumnFilters, columnFilters.length, clearAllFilters, renderCustomActions]);
+  ), [subTitle, tableData.length, filteredData.length, globalFilter, enablePagination, pagination.pageSize, enableColumnFilters, columnFilters.length, clearAllFilters, renderCustomActions]);
 
   // Main table configuration - heavily memoized
   const tableConfig = useMemo(() => ({
@@ -489,12 +529,17 @@ const DataTable = memo(({
       density,
       showColumnFilters: enableColumnFilters, // Show column filters if enabled
       columnFilters: [], // Initialize empty column filters
+      pagination: {
+        pageIndex: 0,
+        pageSize: pageSize,
+      },
     },
     
     // Event handlers
     onGlobalFilterChange: debouncedSearch,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
+    onPaginationChange: setPagination,
 
     // State
     state: {
@@ -502,6 +547,7 @@ const DataTable = memo(({
       columnFilters,
       globalFilter,
       sorting,
+      pagination,
     },
 
     // Styling
@@ -513,7 +559,14 @@ const DataTable = memo(({
     // Other props
     columnFilterDisplayMode: columnFilterDisplayMode || "popover",
     isMultiSortEvent: () => false,
-    // Pagination disabled
+    
+    // Pagination configuration
+    paginationDisplayMode: enablePagination ? paginationDisplayMode : undefined,
+    muiPaginationProps: enablePagination ? {
+      rowsPerPageOptions: pageSizeOptions,
+      showFirstButton: true,
+      showLastButton: true,
+    } : undefined,
     
     // Column filter props for better UX
     muiTableHeadCellFilterTextFieldProps: {
@@ -547,9 +600,12 @@ const DataTable = memo(({
     columnFilters,
     globalFilter,
     sorting,
+    pagination,
     stylingOptions,
     customToolbar,
     columnFilterDisplayMode,
+    paginationDisplayMode,
+    pageSizeOptions,
   ]);
 
   const table = useMaterialReactTable(tableConfig);

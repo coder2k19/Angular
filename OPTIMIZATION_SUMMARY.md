@@ -22,9 +22,10 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 - **Token validation**: Added authentication token validation before API calls
 
 ### 4. **Smart Feature Enablement**
-- **Pagination disabled**: As requested by user, all pagination functionality removed
-- **Conditional virtualization**: Enabled for datasets > 50 items for better performance
-- **Optimized row height**: Set to 60px for better virtualization performance
+- **Pagination enabled**: Shows row count information (e.g., "10 rows per page", "Total: 50 records")
+- **Page size options**: Configurable options [5, 10, 20, 50] for user preference
+- **Virtualization disabled**: When pagination is enabled for better compatibility
+- **Optimized row height**: Set to 60px for better display performance
 
 ## DataTable Component Optimizations
 
@@ -40,11 +41,11 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 - **Storage key optimization**: Computed storage keys only once
 - **Reduced dependency arrays**: Minimized useEffect dependencies
 
-### 3. **Virtualization Enhancements**
-- **Smart virtualization**: Only enabled when beneficial (>10 columns, medium+ datasets)
-- **Optimized row heights**: Better estimation for column widths
-- **No pagination**: All data displayed with smooth virtualized scrolling
-- **Column virtualization**: Enabled for tables with >10 columns
+### 3. **Pagination & Display Enhancements**
+- **Smart pagination**: Shows row count info with customizable page sizes
+- **Page size options**: User can choose between 5, 10, 20, or 50 rows per page
+- **Row count display**: Shows "Total: X records" and "Y rows per page"
+- **Column virtualization**: Enabled for tables with >10 columns when not paginated
 
 ### 4. **Code Structure Improvements**
 - **Extracted functions**: Moved debounce creation outside component
@@ -92,11 +93,11 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 
 ## Usage Recommendations
 
-1. **For small datasets (<50 items)**: Standard rendering without virtualization
-2. **For medium datasets (50+ items)**: Virtualization automatically enabled for smooth scrolling
-3. **For large datasets (>100 items)**: Full virtualization with optimized performance
+1. **For small datasets (<50 items)**: Use pagination with 10-20 rows per page
+2. **For medium datasets (50-200 items)**: Use pagination with 20-50 rows per page
+3. **For large datasets (>200 items)**: Consider server-side pagination or virtualization
 4. **For very wide tables (>10 columns)**: Column virtualization will automatically enable
-5. **No pagination**: All data visible with continuous smooth scrolling
+5. **Pagination benefits**: Shows clear row count information and page navigation
 6. **Global search**: Use searchableText for enhanced search across all fields and custom keywords
 
 ## Breaking Changes
