@@ -50,13 +50,20 @@ const DataTable = memo(({
   enableColumnFilterModes = false,
 }) => {
   // Memoize processed columns to prevent unnecessary recalculations
-  const columns = useMemo(
-    () =>
-      typeof tableColumns === "function"
-        ? tableColumns(actionData)
-        : tableColumns,
-    [tableColumns, actionData]
-  );
+  const columns = useMemo(() => {
+    const processedColumns = typeof tableColumns === "function"
+      ? tableColumns(actionData)
+      : tableColumns;
+    
+    // Ensure columns have proper filter configuration
+    return processedColumns?.map(column => ({
+      ...column,
+      // Enable filtering for all columns unless explicitly disabled
+      enableColumnFilter: column.enableColumnFilter !== false && enableColumnFilters,
+      // Ensure proper filter function
+      filterFn: column.filterFn || 'includesString',
+    }));
+  }, [tableColumns, actionData, enableColumnFilters]);
 
   const isSmallScreen = useMediaQuery("(max-width: 1366px)");
   
@@ -352,6 +359,15 @@ const DataTable = memo(({
     return performGlobalSearch(globalFilter, tableData);
   }, [performGlobalSearch, globalFilter, tableData]);
 
+    // Debug: Log data structure for filter troubleshooting
+  useEffect(() => {
+    if (enableColumnFilters && tableData.length > 0) {
+      console.log('DataTable Debug - Sample row:', tableData[0]);
+      console.log('DataTable Debug - Columns:', columns);
+      console.log('DataTable Debug - enableFacetedValues:', enableColumnFilters);
+    }
+  }, [tableData, columns, enableColumnFilters]);
+
   // Memoized custom toolbar
   const customToolbar = useMemo(() => (
     <Box display="flex" flexDirection="column" gap={1}>
@@ -394,6 +410,13 @@ const DataTable = memo(({
             pl: 1
           }}>
             Filters Active: {columnFilters.length}
+          </Typography>
+          <Typography variant="caption" sx={{
+            color: theme.palette.info.main,
+            fontSize: "12px",
+            fontStyle: "italic",
+          }}>
+            (Click column headers to filter)
           </Typography>
           {(columnFilters.length > 0 || globalFilter) && (
             <Button
@@ -447,10 +470,14 @@ const DataTable = memo(({
       } : 
       'includesString', // Default MRT filter
     
-    // Performance optimizations
-    enableFacetedValues,
-    enableGlobalFilterModes,
-    enableColumnFilterModes,
+    // Performance optimizations - enable faceted values for filter dropdowns
+    enableFacetedValues: enableColumnFilters, // Enable when column filters are enabled
+    enableGlobalFilterModes: false, // Disable for performance
+    enableColumnFilterModes: false, // Disable for performance
+    
+    // Filter configuration
+    filterFromLeafRows: true, // Filter from leaf rows for better performance
+    maxLeafRowFilterDepth: 0, // No sub-rows, so set to 0
     
     // Manual operations (all disabled for client-side processing)
     manualPagination: false,
@@ -460,7 +487,8 @@ const DataTable = memo(({
     // Initial state
     initialState: { 
       density,
-      showColumnFilters: false,
+      showColumnFilters: enableColumnFilters, // Show column filters if enabled
+      columnFilters: [], // Initialize empty column filters
     },
     
     // Event handlers
@@ -486,6 +514,18 @@ const DataTable = memo(({
     columnFilterDisplayMode: columnFilterDisplayMode || "popover",
     isMultiSortEvent: () => false,
     // Pagination disabled
+    
+    // Column filter props for better UX
+    muiTableHeadCellFilterTextFieldProps: {
+      sx: {
+        m: 0.5,
+        "& .MuiInputBase-root": {
+          fontSize: "14px",
+        },
+      },
+      variant: "outlined",
+      size: "small",
+    },
   }), [
     columns,
     tableData,

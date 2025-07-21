@@ -172,11 +172,12 @@ const UploadedDataList = () => {
       enablePersistentFilters={true}
       enableTopToolbar={true}
       enableColumnFilters={true}
+      columnFilterDisplayMode="popover" // Use popover for better UX
       enableVirtualization={dataUploaded.length > 50} // Enable virtualization for medium to large datasets
       virtualItemSize={60} // Optimized row height
       tableId="upload-list"
       // Performance optimizations
-      enableFacetedValues={false}
+      enableFacetedValues={true} // Enable for filter dropdown values
       enableGlobalFilterModes={false}
       enableColumnFilterModes={false}
     />
