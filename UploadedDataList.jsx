@@ -165,7 +165,7 @@ const UploadedDataList = () => {
       searchPlaceholder="Search files, dates, status, numbers..."
       searchableTextKey="searchableText" // Use searchableText field for global search
       isLoading={isLoading}
-      enablePagination={false} // Pagination disabled as requested
+      enablePagination={true} // Enable pagination to show row count info
       hgt={tableHeight}
       onDrag={false}
       borderPadding={false}
@@ -173,13 +173,17 @@ const UploadedDataList = () => {
       enableTopToolbar={true}
       enableColumnFilters={true}
       columnFilterDisplayMode="popover" // Use popover for better UX
-      enableVirtualization={dataUploaded.length > 50} // Enable virtualization for medium to large datasets
-      virtualItemSize={60} // Optimized row height
-      tableId="upload-list"
-      // Performance optimizations
-      enableFacetedValues={true} // Enable for filter dropdown values
-      enableGlobalFilterModes={false}
-      enableColumnFilterModes={false}
+              enableVirtualization={false} // Disable virtualization when using pagination
+        virtualItemSize={60} // Optimized row height
+        tableId="upload-list"
+        // Pagination settings
+        paginationDisplayMode="pages"
+        pageSize={10} // Default page size
+        pageSizeOptions={[5, 10, 20, 50]} // Page size options
+        // Performance optimizations
+        enableFacetedValues={true} // Enable for filter dropdown values
+        enableGlobalFilterModes={false}
+        enableColumnFilterModes={false}
     />
   );
 };
