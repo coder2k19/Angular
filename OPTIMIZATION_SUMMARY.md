@@ -76,6 +76,8 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 - ✅ Null-safe data transformation
 - ✅ Smart feature enablement based on data size
 - ✅ Better responsive height calculation
+- ✅ **Enhanced global search with searchableText**
+- ✅ **Searchable across all fields and custom keywords**
 
 ### DataTable:
 - ✅ React.memo for preventing unnecessary re-renders
@@ -84,6 +86,9 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 - ✅ Debounced localStorage operations
 - ✅ Better data statistics in toolbar
 - ✅ Improved filter management UI
+- ✅ **Enhanced global search with searchableText support**
+- ✅ **Intelligent search function with custom keywords**
+- ✅ **Real-time search result statistics**
 
 ## Usage Recommendations
 
@@ -92,6 +97,7 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 3. **For large datasets (>100 items)**: Full virtualization with optimized performance
 4. **For very wide tables (>10 columns)**: Column virtualization will automatically enable
 5. **No pagination**: All data visible with continuous smooth scrolling
+6. **Global search**: Use searchableText for enhanced search across all fields and custom keywords
 
 ## Breaking Changes
 - None - all changes are backward compatible
@@ -104,3 +110,37 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 3. **Implement progressive loading** for very large datasets
 4. **Add keyboard navigation** for accessibility
 5. **Consider server-side filtering** for datasets >1000 items
+
+## Global Search Enhancement
+
+### SearchableText Implementation
+The `searchableText` field is automatically generated for each row and includes:
+- **All visible column data** (file names, dates, statuses, numbers)
+- **Lowercase versions** of text fields for case-insensitive search
+- **Custom search keywords** like 'uploaded', 'import', 'data', 'file'
+- **Concatenated searchable content** for comprehensive search coverage
+
+### Search Features
+- ✅ **Real-time search** with 300ms debounce for optimal performance
+- ✅ **Case-insensitive** search across all fields
+- ✅ **Intelligent filtering** using dedicated searchableText field
+- ✅ **Search result statistics** showing "X of Y records"
+- ✅ **Visual search indicator** displaying current search term
+- ✅ **Enhanced search placeholder** with context-specific hints
+
+### Usage Examples
+```javascript
+// Basic search
+searchPlaceholder="Search files, dates, status, numbers..."
+
+// With searchableText key
+searchableTextKey="searchableText"
+
+// The searchableText field includes:
+searchableText: "filename.csv 15 December 2023 completed 1500 250 100 uploaded import data file"
+```
+
+### Performance Benefits
+- **Faster search** using pre-computed searchableText field
+- **Reduced CPU usage** with optimized search algorithms
+- **Better UX** with instant visual feedback and result counts

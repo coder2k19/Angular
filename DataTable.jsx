@@ -26,6 +26,7 @@ const DataTable = memo(({
   enableTopToolbar = true,
   enableSorting = true,
   searchPlaceholder = "Search...",
+  searchableTextKey = null, // Key for searchable text field in data
   isLoading = false,
   density = "comfortable",
   subTitle,
@@ -127,6 +128,28 @@ const DataTable = memo(({
     }
   }, [sorting, storageKeys, debouncedSave]);
 
+  // Enhanced global search function
+  const performGlobalSearch = useCallback((searchTerm, data) => {
+    if (!searchTerm || searchTerm.trim() === "") {
+      return data;
+    }
+
+    const searchTermLower = searchTerm.toLowerCase().trim();
+    
+    return data.filter((row) => {
+      // If searchableTextKey is provided, search in that field first
+      if (searchableTextKey && row[searchableTextKey]) {
+        return row[searchableTextKey].toLowerCase().includes(searchTermLower);
+      }
+      
+      // Otherwise, search in all visible columns
+      return Object.values(row).some((value) => {
+        if (value == null) return false;
+        return String(value).toLowerCase().includes(searchTermLower);
+      });
+    });
+  }, [searchableTextKey]);
+
   // Memoized debounced search handler
   const debouncedSearch = useMemo(
     () => createDebounce((value) => {
@@ -200,8 +223,22 @@ const DataTable = memo(({
         width: "100%",
         borderRadius: "8px",
         backgroundColor: theme.palette.common.white + "!important",
+        "& .MuiOutlinedInput-root": {
+          "&:hover fieldset": {
+            borderColor: theme.palette.primary.main,
+          },
+          "&.Mui-focused fieldset": {
+            borderColor: theme.palette.primary.main,
+            borderWidth: "2px",
+          },
+        },
+        "& .MuiInputBase-input": {
+          fontSize: "14px",
+          padding: "12px 14px",
+        },
       },
       variant: "outlined",
+      autoComplete: "off",
     },
 
     muiTopToolbarProps: {
@@ -310,6 +347,11 @@ const DataTable = memo(({
     hgt,
   ]);
 
+  // Memoized filtered data for display statistics
+  const filteredData = useMemo(() => {
+    return performGlobalSearch(globalFilter, tableData);
+  }, [performGlobalSearch, globalFilter, tableData]);
+
   // Memoized custom toolbar
   const customToolbar = useMemo(() => (
     <Box display="flex" flexDirection="column" gap={1}>
@@ -319,14 +361,29 @@ const DataTable = memo(({
         </Typography>
       )}
       
-      {/* Data statistics */}
-      <Typography variant="caption" sx={{
-        color: theme.palette.text.secondary,
-        fontSize: "12px",
-        pl: 1
-      }}>
-        Showing {tableData.length} records
-      </Typography>
+      {/* Data statistics with search results */}
+      <Box display="flex" gap={2} alignItems="center">
+        <Typography variant="caption" sx={{
+          color: theme.palette.text.secondary,
+          fontSize: "12px",
+          pl: 1
+        }}>
+          {globalFilter ? 
+            `Showing ${filteredData.length} of ${tableData.length} records` :
+            `Showing ${tableData.length} records`
+          }
+        </Typography>
+        
+        {globalFilter && (
+          <Typography variant="caption" sx={{
+            color: theme.palette.primary.main,
+            fontSize: "12px",
+            fontWeight: 500,
+          }}>
+            Search: "{globalFilter}"
+          </Typography>
+        )}
+      </Box>
 
       {enableColumnFilters && (
         <Box display="flex" gap={1} alignItems="center">
@@ -357,7 +414,7 @@ const DataTable = memo(({
       )}
       {renderCustomActions && renderCustomActions()}
     </Box>
-  ), [subTitle, tableData.length, enableColumnFilters, columnFilters.length, globalFilter, clearAllFilters, renderCustomActions]);
+  ), [subTitle, tableData.length, filteredData.length, globalFilter, enableColumnFilters, columnFilters.length, clearAllFilters, renderCustomActions]);
 
   // Main table configuration - heavily memoized
   const tableConfig = useMemo(() => ({
@@ -378,6 +435,17 @@ const DataTable = memo(({
     positionToolbarAlertBanner: "bottom",
     enableColumnOrdering: onDrag,
     enableColumnDragging: false,
+    
+    // Global filter function
+    globalFilterFn: searchableTextKey ? 
+      (row, columnId, filterValue) => {
+        if (!filterValue) return true;
+        const searchableText = row.original[searchableTextKey];
+        return searchableText ? 
+          searchableText.toLowerCase().includes(filterValue.toLowerCase()) : 
+          false;
+      } : 
+      'includesString', // Default MRT filter
     
     // Performance optimizations
     enableFacetedValues,
@@ -433,6 +501,7 @@ const DataTable = memo(({
     enableColumnFilterModes,
     density,
     enableVirtualization,
+    searchableTextKey,
     debouncedSearch,
     isLoading,
     columnFilters,

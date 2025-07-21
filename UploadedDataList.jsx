@@ -24,21 +24,49 @@ const UploadedDataList = () => {
     return "65dvh";
   }, [isSmallScreen, isMediumScreen, isLargeScreen]);
 
-  // Memoized data transformation function
+  // Memoized data transformation function with searchableText
   const transformUploadedData = useCallback((data) => {
-    return data.map((item) => ({
-      fileName: item.file_name || 'Unknown File',
-      uploadedDate: item.created_at 
+    return data.map((item) => {
+      const fileName = item.file_name || 'Unknown File';
+      const uploadedDate = item.created_at 
         ? format(new Date(item.created_at), "dd MMMM yyyy")
-        : 'Unknown Date',
-      total_rowes: item.total_rows || 0,
-      companies_imported: (item.total_new_companies || 0).toString(),
-      contacts_imported: (item.total_new_contacts || 0).toString(),
-      companies_researched: (item.total_companies_market_researched || 0).toString(),
-      contacts_researched: (item.total_contacts_market_researched || 0).toString(),
-      total_rows_skipped: (item.total_skipped || 0).toString(),
-      status: item.over_all_status || 'Unknown',
-    }));
+        : 'Unknown Date';
+      const status = item.over_all_status || 'Unknown';
+      const totalRows = item.total_rows || 0;
+      const companiesImported = (item.total_new_companies || 0).toString();
+      const contactsImported = (item.total_new_contacts || 0).toString();
+      const companiesResearched = (item.total_companies_market_researched || 0).toString();
+      const contactsResearched = (item.total_contacts_market_researched || 0).toString();
+      const totalSkipped = (item.total_skipped || 0).toString();
+
+      return {
+        fileName,
+        uploadedDate,
+        total_rowes: totalRows,
+        companies_imported: companiesImported,
+        contacts_imported: contactsImported,
+        companies_researched: companiesResearched,
+        contacts_researched: contactsResearched,
+        total_rows_skipped: totalSkipped,
+        status,
+        // Searchable text for global search - includes all searchable content
+        searchableText: [
+          fileName,
+          uploadedDate,
+          status,
+          totalRows.toString(),
+          companiesImported,
+          contactsImported,
+          companiesResearched,
+          contactsResearched,
+          totalSkipped,
+          // Additional searchable terms
+          item.file_name?.toLowerCase(),
+          item.over_all_status?.toLowerCase(),
+          'uploaded', 'import', 'data', 'file'
+        ].filter(Boolean).join(' ').toLowerCase()
+      };
+    });
   }, []);
 
   // Optimized API call with proper error handling
@@ -129,11 +157,13 @@ const UploadedDataList = () => {
   }
 
   return (
-    <DataTable
+        <DataTable
       tableData={dataUploaded}
       tableColumns={uploadedDataColumnHeader}
       density="comfortable"
-      searchPlaceholder="Search uploaded files..."
+      enableSearch={true} // Enable global search
+      searchPlaceholder="Search files, dates, status, numbers..."
+      searchableTextKey="searchableText" // Use searchableText field for global search
       isLoading={isLoading}
       enablePagination={false} // Pagination disabled as requested
       hgt={tableHeight}
@@ -142,7 +172,7 @@ const UploadedDataList = () => {
       enablePersistentFilters={true}
       enableTopToolbar={true}
       enableColumnFilters={true}
-              enableVirtualization={dataUploaded.length > 50} // Enable virtualization for medium to large datasets
+      enableVirtualization={dataUploaded.length > 50} // Enable virtualization for medium to large datasets
       virtualItemSize={60} // Optimized row height
       tableId="upload-list"
       // Performance optimizations
