@@ -3,13 +3,9 @@ import { useCallback, useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { API } from "../../global";
-import {
-  capitalizeIndustry,
-  capitalizeText,
-  formatRevenue,
-} from "../../Constants/Funtions/commonFunctions";
+// Import removed since we're not using company-related functions for upload logs
 import DataTable from "../Reusable/DataTable/DataTable_v2";
-import { companyDatabaseColumnHeader } from "../OutReachDetails/CommonColumnHeadr";
+import { uploadedDataColumnHeader } from "../OutReachDetails/CommonColumnHeadr";
 import CompanyViewDetails from "../OutReachDetails/MarketPlan/CompanyViewDetails";
 import ContactDetails from "../OutReachDetails/MarketPlan/ContactDetails";
 
@@ -19,7 +15,6 @@ const UploadedFileList = () => {
   // State management
   const [allUploadDetails, setAllUploadDetails] = useState([]); // Store all upload data from server
   const [isLoading, setIsLoading] = useState(false);
-  const [userDetails, setUserListDetails] = useState([]);
   const [initialLoadComplete, setInitialLoadComplete] = useState(false);
 
   // URL parameters
@@ -142,12 +137,9 @@ const UploadedFileList = () => {
   );
 
   // Memoize table columns to prevent unnecessary re-renders
-  // Note: You'll need to create appropriate column headers for upload logs
   const tableColumns = useMemo(() => {
-    // You might want to create a new column header function for upload logs
-    // or modify the existing one to handle upload data
-    return companyDatabaseColumnHeader(userDetails, allUploadDetails);
-  }, [userDetails, allUploadDetails]);
+    return uploadedDataColumnHeader(handleReadMore, "uploaded_files");
+  }, [handleReadMore]);
 
   // Show loading state for initial load
   if (!initialLoadComplete && isLoading) {
