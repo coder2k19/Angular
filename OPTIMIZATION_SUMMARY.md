@@ -22,8 +22,8 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 - **Token validation**: Added authentication token validation before API calls
 
 ### 4. **Smart Feature Enablement**
-- **Conditional pagination**: Only enabled for datasets > 50 items
-- **Conditional virtualization**: Only enabled for datasets > 100 items
+- **Pagination disabled**: As requested by user, all pagination functionality removed
+- **Conditional virtualization**: Enabled for datasets > 50 items for better performance
 - **Optimized row height**: Set to 60px for better virtualization performance
 
 ## DataTable Component Optimizations
@@ -41,9 +41,9 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 - **Reduced dependency arrays**: Minimized useEffect dependencies
 
 ### 3. **Virtualization Enhancements**
-- **Smart virtualization**: Only enabled when beneficial (>10 columns, large datasets)
+- **Smart virtualization**: Only enabled when beneficial (>10 columns, medium+ datasets)
 - **Optimized row heights**: Better estimation for column widths
-- **Larger page sizes**: Increased to 100 items for virtualized tables
+- **No pagination**: All data displayed with smooth virtualized scrolling
 - **Column virtualization**: Enabled for tables with >10 columns
 
 ### 4. **Code Structure Improvements**
@@ -87,10 +87,11 @@ Both the `UploadedDataList` and `DataTable` components have been optimized for b
 
 ## Usage Recommendations
 
-1. **For small datasets (<50 items)**: Disable pagination and virtualization
-2. **For medium datasets (50-100 items)**: Enable pagination only
-3. **For large datasets (>100 items)**: Enable both pagination and virtualization
+1. **For small datasets (<50 items)**: Standard rendering without virtualization
+2. **For medium datasets (50+ items)**: Virtualization automatically enabled for smooth scrolling
+3. **For large datasets (>100 items)**: Full virtualization with optimized performance
 4. **For very wide tables (>10 columns)**: Column virtualization will automatically enable
+5. **No pagination**: All data visible with continuous smooth scrolling
 
 ## Breaking Changes
 - None - all changes are backward compatible

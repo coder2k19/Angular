@@ -63,10 +63,7 @@ const DataTable = memo(({
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: enableVirtualization ? 100 : 50, // Larger page size for virtualization
-  });
+  // Removed pagination state since pagination is disabled
 
   // Memoize storage key functions
   const storageKeys = useMemo(() => {
@@ -261,13 +258,7 @@ const DataTable = memo(({
       }),
     },
 
-    muiBottomToolbarProps: enablePagination ? {
-      sx: {
-        boxShadow: "none",
-        backgroundColor: theme.palette.common.white,
-        minHeight: minHgt || "3rem",
-      },
-    } : undefined,
+    // Bottom toolbar disabled since pagination is disabled
 
     muiTableBodyCellProps: {
       sx: {
@@ -315,8 +306,6 @@ const DataTable = memo(({
     isSmallScreen,
     type,
     borderPadding,
-    enablePagination,
-    minHgt,
     wdth,
     hgt,
   ]);
@@ -404,17 +393,12 @@ const DataTable = memo(({
     initialState: { 
       density,
       showColumnFilters: false,
-      pagination: {
-        pageIndex: 0,
-        pageSize: enableVirtualization ? 100 : 50,
-      },
     },
     
     // Event handlers
     onGlobalFilterChange: debouncedSearch,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
-    onPaginationChange: setPagination,
 
     // State
     state: {
@@ -422,7 +406,6 @@ const DataTable = memo(({
       columnFilters,
       globalFilter,
       sorting,
-      pagination,
     },
 
     // Styling
@@ -434,7 +417,7 @@ const DataTable = memo(({
     // Other props
     columnFilterDisplayMode: columnFilterDisplayMode || "popover",
     isMultiSortEvent: () => false,
-    paginationDisplayMode: enablePagination ? "pages" : undefined,
+    // Pagination disabled
   }), [
     columns,
     tableData,
@@ -455,7 +438,6 @@ const DataTable = memo(({
     columnFilters,
     globalFilter,
     sorting,
-    pagination,
     stylingOptions,
     customToolbar,
     columnFilterDisplayMode,

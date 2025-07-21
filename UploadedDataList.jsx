@@ -135,14 +135,14 @@ const UploadedDataList = () => {
       density="comfortable"
       searchPlaceholder="Search uploaded files..."
       isLoading={isLoading}
-      enablePagination={dataUploaded.length > 50} // Enable pagination for large datasets
+      enablePagination={false} // Pagination disabled as requested
       hgt={tableHeight}
       onDrag={false}
       borderPadding={false}
       enablePersistentFilters={true}
       enableTopToolbar={true}
       enableColumnFilters={true}
-      enableVirtualization={dataUploaded.length > 100} // Enable virtualization for large datasets
+              enableVirtualization={dataUploaded.length > 50} // Enable virtualization for medium to large datasets
       virtualItemSize={60} // Optimized row height
       tableId="upload-list"
       // Performance optimizations
