@@ -2,10 +2,9 @@ import { Box, useMediaQuery } from "@mui/system";
 import { useCallback, useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { Chip } from "@mui/material";
 import { API } from "../../global";
-// Import removed since we're not using company-related functions for upload logs
 import DataTable from "../Reusable/DataTable/DataTable_v2";
-import { uploadedDataColumnHeader } from "../OutReachDetails/CommonColumnHeadr";
 import CompanyViewDetails from "../OutReachDetails/MarketPlan/CompanyViewDetails";
 import ContactDetails from "../OutReachDetails/MarketPlan/ContactDetails";
 
@@ -136,10 +135,327 @@ const UploadedFileList = () => {
     [navigate]
   );
 
-  // Memoize table columns to prevent unnecessary re-renders
+  // Column definition for upload logs table
   const tableColumns = useMemo(() => {
-    return uploadedDataColumnHeader(handleReadMore, "uploaded_files");
-  }, [handleReadMore]);
+    const headerStyle = {
+      backgroundColor: "#f5f5f5",
+      fontWeight: "bold",
+      color: "#333",
+    };
+
+    return [
+      {
+        accessorKey: "fileName",
+        header: "File Name",
+        size: 200,
+        filterVariant: "text",
+        enableHiding: true,
+        enableSorting: true,
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "uploadedDate",
+        header: "Date Uploaded",
+        size: 150,
+        filterVariant: "text",
+        enableHiding: false,
+        enableSorting: true,
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "companies_imported",
+        header: "Companies Imported",
+        size: 150,
+        filterVariant: "text",
+        enableHiding: true,
+        enableSorting: true,
+        sortingFn: (rowA, rowB) => {
+          return (rowA.original.companies_imported_raw || 0) - (rowB.original.companies_imported_raw || 0);
+        },
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+            display: { xs: "none", sm: "table-cell" },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            display: { xs: "none", sm: "table-cell" },
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "contacts_imported",
+        header: "Contacts Imported",
+        filterVariant: "text",
+        size: 150,
+        enableHiding: true,
+        enableSorting: true,
+        sortingFn: (rowA, rowB) => {
+          return (rowA.original.contacts_imported_raw || 0) - (rowB.original.contacts_imported_raw || 0);
+        },
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+            display: { xs: "none", sm: "table-cell" },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            display: { xs: "none", sm: "table-cell" },
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "companies_researched",
+        header: "Companies Researched",
+        size: 150,
+        filterVariant: "text",
+        enableHiding: true,
+        enableSorting: true,
+        sortingFn: (rowA, rowB) => {
+          return (rowA.original.companies_researched_raw || 0) - (rowB.original.companies_researched_raw || 0);
+        },
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+            display: { xs: "none", sm: "table-cell" },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            display: { xs: "none", sm: "table-cell" },
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "contacts_researched",
+        header: "Contacts Researched",
+        size: 150,
+        filterVariant: "text",
+        enableHiding: true,
+        enableSorting: true,
+        sortingFn: (rowA, rowB) => {
+          return (rowA.original.contacts_researched_raw || 0) - (rowB.original.contacts_researched_raw || 0);
+        },
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+            display: { xs: "none", sm: "table-cell" },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            display: { xs: "none", sm: "table-cell" },
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "total_rows_skipped",
+        header: "Rows Skipped",
+        filterVariant: "text",
+        size: 120,
+        enableHiding: true,
+        enableSorting: true,
+        sortingFn: (rowA, rowB) => {
+          return (rowA.original.total_rows_skipped_raw || 0) - (rowB.original.total_rows_skipped_raw || 0);
+        },
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+            display: { xs: "none", sm: "table-cell" },
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            display: { xs: "none", sm: "table-cell" },
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+      },
+      {
+        accessorKey: "status",
+        header: "Status",
+        filterVariant: "select",
+        size: 120,
+        enableHiding: true,
+        enableSorting: true,
+        muiTableBodyCellProps: {
+          sx: {
+            fontFamily: "Roboto",
+            padding: "8px",
+            fontSize: "16px",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px !important",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+            whiteSpace: "normal",
+          },
+        },
+        muiTableHeadCellProps: {
+          sx: {
+            ...headerStyle,
+            whiteSpace: "normal",
+            "@media (min-width: 1200px) and (max-width: 1400px)": {
+              fontSize: "14px",
+            },
+            "@media (min-width: 1401px) and (max-width: 1600px)": {
+              fontSize: "16px",
+            },
+          },
+        },
+        Cell: ({ cell }) => {
+          const status = cell.getValue()?.toLowerCase();
+
+          const chipStyle =
+            status === "completed"
+              ? {
+                  label: "Completed",
+                  sx: {
+                    backgroundColor: "#56BB6B1F", // light green background
+                    color: "#219653", // dark green text
+                    fontWeight: 500,
+                    fontSize: "14px",
+                  },
+                }
+              : {
+                  label: "Pending",
+                  sx: {
+                    backgroundColor: "#EC9D0014", // light orange background
+                    color: "#F2994A", // orange text
+                    fontWeight: 500,
+                    fontSize: "14px",
+                  },
+                };
+
+          return <Chip label={chipStyle.label} sx={chipStyle.sx} size="small" />;
+        },
+      },
+    ];
+  }, []);
 
   // Show loading state for initial load
   if (!initialLoadComplete && isLoading) {
