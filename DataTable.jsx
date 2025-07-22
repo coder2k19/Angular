@@ -1,21 +1,12 @@
-import { useMemo, useState, useEffect, useCallback, memo } from "react";
+import { useMemo, useState, useEffect, useCallback } from "react";
 import {
   MaterialReactTable,
   useMaterialReactTable,
 } from "material-react-table";
-import { Box, Typography, useMediaQuery, Button } from "@mui/material";
+import { Box, Typography, useMediaQuery } from "@mui/material";
 import theme from "../../../Constants/theme";
 
-// Memoized debounce function to prevent recreation
-const createDebounce = (func, delay) => {
-  let timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => func.apply(this, args), delay);
-  };
-};
-
-const DataTable = memo(({
+const DataTable = ({
   tableData = [],
   tableColumns,
   actionData,
@@ -26,195 +17,309 @@ const DataTable = memo(({
   enableTopToolbar = true,
   enableSorting = true,
   searchPlaceholder = "Search...",
-  searchableTextKey = null, // Key for searchable text field in data
   isLoading = false,
-  density = "comfortable",
+  density,
   subTitle,
-  enablePagination = false,
-  hgt = "70vh",
+  enablePagination = false, // Changed default to false for virtualization
+  hgt,
   minHgt,
   type,
   wdth,
-  onDrag = false,
-  borderPadding = true,
-  enableColumnFilters = false,
+  onDrag,
+  borderPadding,
+  enableColumnFilters,
   fetchColumnFilters,
   tableId,
-  enablePersistentFilters = false,
+  enablePersistentFilters,
   columnFilterDisplayMode,
-  enableVirtualization = true,
-  virtualItemSize = 50,
-  overscan = 5, // Reduced overscan for better performance
-  enableFacetedValues = false,
-  enableGlobalFilterModes = false,
-  enableColumnFilterModes = false,
-  // Pagination props
-  paginationDisplayMode = "pages",
-  pageSize = 10,
-  pageSizeOptions = [5, 10, 20, 50],
+  enableVirtualization = true, // New prop to enable/disable virtualization
+  virtualItemSize = 50, // Height of each row for virtualization
+  overscan = 10, // Number of items to render outside visible area
 }) => {
-  // Memoize processed columns to prevent unnecessary recalculations
-  const columns = useMemo(() => {
-    const processedColumns = typeof tableColumns === "function"
-      ? tableColumns(actionData)
-      : tableColumns;
-    
-    // Ensure columns have proper filter configuration
-    return processedColumns?.map(column => ({
-      ...column,
-      // Enable filtering for all columns unless explicitly disabled
-      enableColumnFilter: column.enableColumnFilter !== false && enableColumnFilters,
-      // Ensure proper filter function
-      filterFn: column.filterFn || 'includesString',
-    }));
-  }, [tableColumns, actionData, enableColumnFilters]);
+  // Process columns if a transform function is provided
+  const columns = useMemo(
+    () =>
+      typeof tableColumns === "function"
+        ? tableColumns(actionData)
+        : tableColumns,
+    [tableColumns, actionData]
+  );
 
   const isSmallScreen = useMediaQuery("(max-width: 1366px)");
   
-  // Optimized state management
+  // Store original data from server (never filtered on server)
+  const [originalData, setOriginalData] = useState([]);
+  
+  // Filtered and sorted data for display
+  const [processedData, setProcessedData] = useState([]);
+  
   const [globalFilter, setGlobalFilter] = useState("");
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: pageSize,
-  });
 
-  // Memoize storage key functions
-  const storageKeys = useMemo(() => {
-    if (!enablePersistentFilters || !tableId) return null;
-    return {
-      columnFilters: `datatable_${tableId}_columnFilters`,
-      globalFilter: `datatable_${tableId}_globalFilter`,
-      sorting: `datatable_${tableId}_sorting`,
-    };
-  }, [enablePersistentFilters, tableId]);
+  // Generate storage keys for persistent filters (moved outside useEffect to fix dependency warning)
+  const getStorageKey = useCallback((key) => `datatable_${tableId}_${key}`, [tableId]);
 
-  // Load persistent filters from localStorage (only once on mount)
+  // Load persistent filters from localStorage
   useEffect(() => {
-    if (!storageKeys) return;
-
-    try {
-      const savedFilters = localStorage.getItem(storageKeys.columnFilters);
-      const savedGlobalFilter = localStorage.getItem(storageKeys.globalFilter);
-      const savedSorting = localStorage.getItem(storageKeys.sorting);
+    if (enablePersistentFilters && tableId) {
+      const savedFilters = localStorage.getItem(getStorageKey("columnFilters"));
+      const savedGlobalFilter = localStorage.getItem(
+        getStorageKey("globalFilter")
+      );
+      const savedSorting = localStorage.getItem(getStorageKey("sorting"));
 
       if (savedFilters) {
-        setColumnFilters(JSON.parse(savedFilters));
+        try {
+          const parsedFilters = JSON.parse(savedFilters);
+          setColumnFilters(parsedFilters);
+        } catch (e) {
+          console.warn("Failed to parse saved column filters:", e);
+        }
       }
+
       if (savedGlobalFilter) {
         setGlobalFilter(savedGlobalFilter);
       }
+
       if (savedSorting) {
-        setSorting(JSON.parse(savedSorting));
+        try {
+          const parsedSorting = JSON.parse(savedSorting);
+          setSorting(parsedSorting);
+        } catch (e) {
+          console.warn("Failed to parse saved sorting:", e);
+        }
       }
-    } catch (e) {
-      console.warn("Failed to parse saved filters:", e);
     }
-  }, []); // Only run once on mount
+  }, [enablePersistentFilters, tableId, getStorageKey]);
 
-  // Debounced save to localStorage
-  const debouncedSave = useMemo(
-    () => createDebounce((key, value) => {
-      if (storageKeys) {
-        localStorage.setItem(key, JSON.stringify(value));
-      }
-    }, 500),
-    [storageKeys]
-  );
-
-  // Save filters to localStorage with debouncing
+  // Save filters to localStorage when they change
   useEffect(() => {
-    if (storageKeys) {
-      debouncedSave(storageKeys.columnFilters, columnFilters);
+    if (enablePersistentFilters && tableId) {
+      localStorage.setItem(
+        getStorageKey("columnFilters"),
+        JSON.stringify(columnFilters)
+      );
     }
-  }, [columnFilters, storageKeys, debouncedSave]);
+  }, [columnFilters, enablePersistentFilters, tableId, getStorageKey]);
 
   useEffect(() => {
-    if (storageKeys) {
-      debouncedSave(storageKeys.globalFilter, globalFilter);
+    if (enablePersistentFilters && tableId) {
+      localStorage.setItem(getStorageKey("globalFilter"), globalFilter);
     }
-  }, [globalFilter, storageKeys, debouncedSave]);
+  }, [globalFilter, enablePersistentFilters, tableId, getStorageKey]);
 
   useEffect(() => {
-    if (storageKeys) {
-      debouncedSave(storageKeys.sorting, sorting);
+    if (enablePersistentFilters && tableId) {
+      localStorage.setItem(
+        getStorageKey("sorting"),
+        JSON.stringify(sorting)
+      );
     }
-  }, [sorting, storageKeys, debouncedSave]);
+  }, [sorting, enablePersistentFilters, tableId, getStorageKey]);
 
-  // Enhanced global search function
-  const performGlobalSearch = useCallback((searchTerm, data) => {
-    if (!searchTerm || searchTerm.trim() === "") {
-      return data;
-    }
+  // Update original data when tableData changes
+  useEffect(() => {
+    setOriginalData(tableData);
+  }, [tableData]);
 
-    const searchTermLower = searchTerm.toLowerCase().trim();
-    
-    return data.filter((row) => {
-      // If searchableTextKey is provided, search in that field first
-      if (searchableTextKey && row[searchableTextKey]) {
-        return row[searchableTextKey].toLowerCase().includes(searchTermLower);
-      }
-      
-      // Otherwise, search in all visible columns
-      return Object.values(row).some((value) => {
-        if (value == null) return false;
-        return String(value).toLowerCase().includes(searchTermLower);
+  // Client-side filtering and sorting function
+  const filterAndSortData = useCallback((data, filters, globalSearch, sortConfig) => {
+    let filteredData = [...data];
+
+    // Apply global filter
+    if (globalSearch && globalSearch.trim() !== "") {
+      const searchTerm = globalSearch.toLowerCase().trim();
+      filteredData = filteredData.filter((row) => {
+        return Object.values(row).some((value) => {
+          if (value == null) return false;
+          return String(value).toLowerCase().includes(searchTerm);
+        });
       });
-    });
-  }, [searchableTextKey]);
+    }
 
-  // Memoized debounced search handler
+    // Apply column filters
+    if (filters && filters.length > 0) {
+      filteredData = filteredData.filter((row) => {
+        return filters.every((filter) => {
+          const { id, value } = filter;
+          if (value === undefined || value === null || value === "") return true;
+          
+          const cellValue = row[id];
+          if (cellValue == null) return false;
+
+          // Handle different filter types
+          if (Array.isArray(value)) {
+            // Multi-select filter
+            return value.includes(cellValue);
+          } else if (typeof value === "string") {
+            // Text filter
+            return String(cellValue).toLowerCase().includes(value.toLowerCase());
+          } else if (typeof value === "number") {
+            // Numeric filter
+            return Number(cellValue) === value;
+          } else if (typeof value === "boolean") {
+            // Boolean filter
+            return Boolean(cellValue) === value;
+          }
+          
+          return String(cellValue).toLowerCase().includes(String(value).toLowerCase());
+        });
+      });
+    }
+
+    // Apply sorting
+    if (sortConfig && sortConfig.length > 0) {
+      filteredData.sort((a, b) => {
+        for (const sort of sortConfig) {
+          const { id, desc } = sort;
+          const aValue = a[id];
+          const bValue = b[id];
+
+          if (aValue == null && bValue == null) continue;
+          if (aValue == null) return desc ? 1 : -1;
+          if (bValue == null) return desc ? -1 : 1;
+
+          let comparison = 0;
+          
+          // Handle different data types
+          if (typeof aValue === "number" && typeof bValue === "number") {
+            comparison = aValue - bValue;
+          } else if (aValue instanceof Date && bValue instanceof Date) {
+            comparison = aValue.getTime() - bValue.getTime();
+          } else {
+            comparison = String(aValue).localeCompare(String(bValue));
+          }
+
+          if (comparison !== 0) {
+            return desc ? -comparison : comparison;
+          }
+        }
+        return 0;
+      });
+    }
+
+    return filteredData;
+  }, []);
+
+  // Process data whenever filters, sorting, or original data changes
+  useEffect(() => {
+    const filtered = filterAndSortData(originalData, columnFilters, globalFilter, sorting);
+    setProcessedData(filtered);
+  }, [originalData, columnFilters, globalFilter, sorting, filterAndSortData]);
+
+  // Calculate if filters are active
+  const hasActiveFilters = useMemo(() => {
+    return (columnFilters && columnFilters.length > 0) || (globalFilter && globalFilter.trim() !== "");
+  }, [columnFilters, globalFilter]);
+
+  // Create a debounce function for search
+  const debounce = (func, delay) => {
+    let timer;
+    return function (...args) {
+      clearTimeout(timer);
+      timer = setTimeout(() => func.apply(this, args), delay);
+    };
+  };
+
+  // Debounced search handler (now only updates local state)
   const debouncedSearch = useMemo(
-    () => createDebounce((value) => {
-      setGlobalFilter(value);
-    }, 300),
+    () =>
+      debounce((value) => {
+        setGlobalFilter(value);
+      }, 300), // Reduced delay since it's client-side
     []
   );
 
-  // Memoized row click handler
+  // Handle row click
   const handleRowClick = useCallback((row) => {
     if (actionData) {
       actionData(row.original);
     }
   }, [actionData]);
 
-  // Memoized clear filters function
+  // Clear all filters function
   const clearAllFilters = useCallback(() => {
     setColumnFilters([]);
     setGlobalFilter("");
     setSorting([]);
 
-    if (storageKeys) {
-      localStorage.removeItem(storageKeys.columnFilters);
-      localStorage.removeItem(storageKeys.globalFilter);
-      localStorage.removeItem(storageKeys.sorting);
+    if (enablePersistentFilters && tableId) {
+      localStorage.removeItem(getStorageKey("columnFilters"));
+      localStorage.removeItem(getStorageKey("globalFilter"));
+      localStorage.removeItem(getStorageKey("sorting"));
     }
-  }, [storageKeys]);
+  }, [enablePersistentFilters, tableId, getStorageKey]);
 
-  // Memoized virtualization options
-  const virtualizationOptions = useMemo(() => {
-    if (!enableVirtualization) return {};
+  // Memoize table configuration
+  const tableConfig = useMemo(() => ({
+    columns,
+    data: processedData,
     
-    return {
-      enableRowVirtualization: true,
-      rowVirtualizerOptions: {
-        overscan,
-        estimateSize: () => virtualItemSize,
-      },
-      enableColumnVirtualization: columns.length > 10,
-      columnVirtualizerOptions: columns.length > 10 ? {
-        overscan: 2,
-        estimateSize: (index) => {
-          const column = columns[index];
-          return column?.size || column?.maxSize || 150;
-        }
-      } : undefined,
-    };
-  }, [enableVirtualization, overscan, virtualItemSize, columns]);
+    // Virtualization settings
+    enableRowVirtualization: enableVirtualization,
+    rowVirtualizerInstanceRef: enableVirtualization ? { current: null } : undefined,
+    rowVirtualizerOptions: enableVirtualization ? {
+      overscan: overscan,
+      estimateSize: () => virtualItemSize,
+    } : undefined,
+    
+    // Column virtualization for wide tables
+    enableColumnVirtualization: enableVirtualization && columns.length > 10,
+    columnVirtualizerOptions: enableVirtualization ? { 
+      overscan: 2,
+      estimateSize: (index) => {
+        // Estimate column width based on column type or provide default
+        const column = columns[index];
+        if (column?.size) return column.size;
+        if (column?.maxSize) return Math.min(column.maxSize, 200);
+        return 150; // default column width
+      }
+    } : undefined,
 
-  // Memoized styling options
-  const stylingOptions = useMemo(() => ({
+    // Disable server-side operations
+    manualPagination: false,
+    manualFiltering: false,
+    manualSorting: false,
+    
+    // Enable client-side features
+    enableGlobalFilter: enableSearch,
+    enablePagination: enablePagination,
+    enableColumnActions: false,
+    enableColumnFilters: enableColumnFilters,
+    enableSorting: enableSorting,
+    enableTopToolbar: enableTopToolbar,
+    enableBottomToolbar: enablePagination,
+    positionToolbarAlertBanner: "bottom",
+    enableColumnOrdering: onDrag,
+    enableColumnDragging: false,
+    // Performance optimizations
+    enableFacetedValues: false, // Disable for large datasets as it can be slow
+    enableGlobalFilterModes: false,
+    enableColumnFilterModes: false,
+    
+    // Initial state
+    initialState: { 
+      density: density, 
+      showColumnFilters: false,
+      pagination: enablePagination ? {
+        pageIndex: 0,
+        pageSize: 50, // Larger page size for virtualized tables
+      } : {
+        pageIndex: 0,
+        pageSize: 50, // Larger page size for virtualized tables
+      },
+    },
+    
+    columnFilterDisplayMode: columnFilterDisplayMode && "popover",
+    isMultiSortEvent: () => false,
+    
+    // Event handlers
+    onGlobalFilterChange: debouncedSearch,
+    onSortingChange: setSorting,
+    onColumnFiltersChange: setColumnFilters,
+
+    // Row props
     muiTableBodyRowProps: ({ row }) => ({
       onClick: () => handleRowClick(row),
       sx: {
@@ -222,7 +327,7 @@ const DataTable = memo(({
         backgroundColor: theme.palette.common.white,
         height: enableVirtualization ? `${virtualItemSize}px` : "auto",
         minHeight: enableVirtualization ? `${virtualItemSize}px` : "auto",
-        overflow: "hidden",
+        overflow: "hidden", // Prevent content overflow in virtualized rows
         "&:hover": {
           cursor: actionData ? "pointer" : "default",
           backgroundColor: theme.palette.action?.hover || "#f5f5f5",
@@ -230,6 +335,25 @@ const DataTable = memo(({
       },
     }),
 
+    // State
+    state: {
+      isLoading,
+      columnFilters,
+      globalFilter,
+      sorting,
+      pagination: enablePagination ? {
+        pageIndex: 0,
+        pageSize: 50,
+      } : {
+        pageIndex: 0,
+        pageSize: 50, // Larger page size for virtualized tables
+      },
+    },
+
+    // Pagination settings
+    paginationDisplayMode: enablePagination ? "pages" : undefined,
+    
+    // Search field props
     muiSearchTextFieldProps: {
       placeholder: searchPlaceholder,
       sx: {
@@ -237,24 +361,11 @@ const DataTable = memo(({
         width: "100%",
         borderRadius: "8px",
         backgroundColor: theme.palette.common.white + "!important",
-        "& .MuiOutlinedInput-root": {
-          "&:hover fieldset": {
-            borderColor: theme.palette.primary.main,
-          },
-          "&.Mui-focused fieldset": {
-            borderColor: theme.palette.primary.main,
-            borderWidth: "2px",
-          },
-        },
-        "& .MuiInputBase-input": {
-          fontSize: "14px",
-          padding: "12px 14px",
-        },
       },
       variant: "outlined",
-      autoComplete: "off",
     },
 
+    // Styling props (keeping your existing styles)
     muiTopToolbarProps: {
       sx: {
         backgroundColor: theme.palette.common.white,
@@ -268,6 +379,10 @@ const DataTable = memo(({
         "& .MuiSvgIcon-root": {
           fontSize: isSmallScreen ? "1rem" : "24px",
           padding: "0px",
+        },
+        "& .css-vv1s46": {
+          padding: "0px",
+          minHeight: "1rem",
         },
       },
     },
@@ -285,7 +400,7 @@ const DataTable = memo(({
         boxShadow: "none !important",
         color: theme.palette.secondary.main,
         fontWeight: "bold",
-        fontSize: "16px",
+        fontSize: "16px", // Fixed from 40px which seemed like a mistake
         padding: "12px 16px",
         backgroundColor: theme.palette.background?.paper || "#fff",
       },
@@ -309,30 +424,18 @@ const DataTable = memo(({
       }),
     },
 
-    // Bottom toolbar for pagination
     muiBottomToolbarProps: enablePagination ? {
       sx: {
         boxShadow: "none",
         backgroundColor: theme.palette.common.white,
-        minHeight: minHgt || "3rem",
-        "& .MuiTablePagination-root": {
-          fontSize: "14px",
-        },
-        "& .MuiTablePagination-selectLabel": {
-          fontSize: "14px",
-          fontWeight: 500,
-        },
-        "& .MuiTablePagination-displayedRows": {
-          fontSize: "14px",
-          fontWeight: 500,
-        },
+        minHeight: minHgt ? minHgt : "3rem",
       },
     } : undefined,
 
     muiTableBodyCellProps: {
       sx: {
-        fontSize: "14px",
-        padding: enableVirtualization ? "8px 16px" : "12px 16px",
+        fontSize: "14px", // Slightly smaller for better virtualization performance
+        padding: enableVirtualization ? "8px 16px" : "12px 16px", // Reduced padding for virtualized rows
         border: `1px solid ${theme.palette.custom.lightGray}`,
         overflow: "hidden",
         textOverflow: "ellipsis",
@@ -348,7 +451,7 @@ const DataTable = memo(({
         backgroundColor: theme.palette.common.white,
         borderRadius: "12px",
         border: `1px solid ${theme.palette.custom.lightGray}`,
-        height: hgt,
+        height: hgt ? hgt : "70vh", // Increased default height for virtualization
         overflow: "auto",
         "&::-webkit-scrollbar": {
           width: "6px",
@@ -366,247 +469,114 @@ const DataTable = memo(({
         },
       },
     },
-  }), [
-    handleRowClick,
-    enableVirtualization,
-    virtualItemSize,
-    actionData,
-    searchPlaceholder,
-    isSmallScreen,
-    type,
-    borderPadding,
-    wdth,
-    hgt,
-  ]);
 
-  // Memoized filtered data for display statistics
-  const filteredData = useMemo(() => {
-    return performGlobalSearch(globalFilter, tableData);
-  }, [performGlobalSearch, globalFilter, tableData]);
-
-    // Debug: Log data structure for filter troubleshooting
-  useEffect(() => {
-    if (enableColumnFilters && tableData.length > 0) {
-      console.log('DataTable Debug - Sample row:', tableData[0]);
-      console.log('DataTable Debug - Columns:', columns);
-      console.log('DataTable Debug - enableFacetedValues:', enableColumnFilters);
-    }
-  }, [tableData, columns, enableColumnFilters]);
-
-  // Memoized custom toolbar
-  const customToolbar = useMemo(() => (
-    <Box display="flex" flexDirection="column" gap={1}>
-      {subTitle && (
-        <Typography fontFamily="Roboto" color={theme.palette.text.darkGray}>
-          {subTitle}
-        </Typography>
-      )}
-      
-      {/* Data statistics with search results and pagination info */}
-      <Box display="flex" gap={2} alignItems="center" flexWrap="wrap">
-        <Typography variant="caption" sx={{
-          color: theme.palette.text.secondary,
-          fontSize: "12px",
-          pl: 1
-        }}>
-          {enablePagination ? (
-            // Show pagination-style info
-            `Total: ${globalFilter ? filteredData.length : tableData.length} records`
-          ) : (
-            // Show regular info
-            globalFilter ? 
-              `Showing ${filteredData.length} of ${tableData.length} records` :
-              `Showing ${tableData.length} records`
-          )}
-        </Typography>
-        
-        {enablePagination && (
-          <Typography variant="caption" sx={{
-            color: theme.palette.info.main,
-            fontSize: "12px",
-            fontWeight: 500,
-          }}>
-            {`${pagination.pageSize} rows per page`}
+    // Custom toolbar actions
+    renderTopToolbarCustomActions: () => (
+      <Box display="flex" flexDirection="column" gap={1}>
+        {subTitle && (
+          <Typography fontFamily="Roboto" color={theme.palette.text.darkGray}>
+            {subTitle}
           </Typography>
         )}
         
-        {globalFilter && (
-          <Typography variant="caption" sx={{
-            color: theme.palette.primary.main,
-            fontSize: "12px",
-            fontWeight: 500,
-          }}>
-            Search: "{globalFilter}"
+        {/* Show row count stats */}
+        <Box display="flex" gap={2} alignItems="center" sx={{ mb: 1 }}>
+          <Typography 
+            variant="body2" 
+            sx={{
+              color: theme.palette.text.primary,
+              fontSize: "14px",
+              fontWeight: 600,
+            }}
+          >
+            {hasActiveFilters ? (
+              <>
+                Showing {processedData.length.toLocaleString()} of {originalData.length.toLocaleString()} rows
+              </>
+            ) : (
+              <>
+                Total Rows: {originalData.length.toLocaleString()}
+              </>
+            )}
           </Typography>
-        )}
-      </Box>
-
-      {enableColumnFilters && (
-        <Box display="flex" gap={1} alignItems="center">
-          <Typography variant="caption" sx={{
-            color: theme.palette.text.secondary,
-            fontSize: "14px",
-            fontWeight: 500,
-            pl: 1
-          }}>
-            Filters Active: {columnFilters.length}
-          </Typography>
-          <Typography variant="caption" sx={{
-            color: theme.palette.info.main,
-            fontSize: "12px",
-            fontStyle: "italic",
-          }}>
-            (Click column headers to filter)
-          </Typography>
-          {(columnFilters.length > 0 || globalFilter) && (
-            <Button
-              size="small"
-              variant="text"
-              onClick={clearAllFilters}
+          
+          {hasActiveFilters && (
+            <Typography
+              variant="caption"
               sx={{
+                color: theme.palette.warning.main,
                 fontSize: "12px",
-                textTransform: "none",
-                minWidth: "auto",
-                p: 0.5,
+                fontStyle: "italic",
               }}
             >
-              Clear All
-            </Button>
+              (Filtered)
+            </Typography>
           )}
         </Box>
-      )}
-      {renderCustomActions && renderCustomActions()}
-    </Box>
-  ), [subTitle, tableData.length, filteredData.length, globalFilter, enablePagination, pagination.pageSize, enableColumnFilters, columnFilters.length, clearAllFilters, renderCustomActions]);
 
-  // Main table configuration - heavily memoized
-  const tableConfig = useMemo(() => ({
-    columns,
-    data: tableData,
-    
-    // Virtualization
-    ...virtualizationOptions,
-    
-    // Core features
-    enableGlobalFilter: enableSearch,
-    enablePagination,
-    enableColumnActions: false,
-    enableColumnFilters,
-    enableSorting,
-    enableTopToolbar,
-    enableBottomToolbar: enablePagination,
-    positionToolbarAlertBanner: "bottom",
-    enableColumnOrdering: onDrag,
-    enableColumnDragging: false,
-    
-    // Global filter function
-    globalFilterFn: searchableTextKey ? 
-      (row, columnId, filterValue) => {
-        if (!filterValue) return true;
-        const searchableText = row.original[searchableTextKey];
-        return searchableText ? 
-          searchableText.toLowerCase().includes(filterValue.toLowerCase()) : 
-          false;
-      } : 
-      'includesString', // Default MRT filter
-    
-    // Performance optimizations - enable faceted values for filter dropdowns
-    enableFacetedValues: enableColumnFilters, // Enable when column filters are enabled
-    enableGlobalFilterModes: false, // Disable for performance
-    enableColumnFilterModes: false, // Disable for performance
-    
-    // Filter configuration
-    filterFromLeafRows: true, // Filter from leaf rows for better performance
-    maxLeafRowFilterDepth: 0, // No sub-rows, so set to 0
-    
-    // Manual operations (all disabled for client-side processing)
-    manualPagination: false,
-    manualFiltering: false,
-    manualSorting: false,
-    
-    // Initial state
-    initialState: { 
-      density,
-      showColumnFilters: enableColumnFilters, // Show column filters if enabled
-      columnFilters: [], // Initialize empty column filters
-      pagination: {
-        pageIndex: 0,
-        pageSize: pageSize,
-      },
-    },
-    
-    // Event handlers
-    onGlobalFilterChange: debouncedSearch,
-    onSortingChange: setSorting,
-    onColumnFiltersChange: setColumnFilters,
-    onPaginationChange: setPagination,
-
-    // State
-    state: {
-      isLoading,
-      columnFilters,
-      globalFilter,
-      sorting,
-      pagination,
-    },
-
-    // Styling
-    ...stylingOptions,
-
-    // Custom toolbar
-    renderTopToolbarCustomActions: () => customToolbar,
-
-    // Other props
-    columnFilterDisplayMode: columnFilterDisplayMode || "popover",
-    isMultiSortEvent: () => false,
-    
-    // Pagination configuration
-    paginationDisplayMode: enablePagination ? paginationDisplayMode : undefined,
-    muiPaginationProps: enablePagination ? {
-      rowsPerPageOptions: pageSizeOptions,
-      showFirstButton: true,
-      showLastButton: true,
-    } : undefined,
-    
-    // Column filter props for better UX
-    muiTableHeadCellFilterTextFieldProps: {
-      sx: {
-        m: 0.5,
-        "& .MuiInputBase-root": {
-          fontSize: "14px",
-        },
-      },
-      variant: "outlined",
-      size: "small",
-    },
+        {enableColumnFilters && (
+          <Box display="flex" gap={1} alignItems="center">
+            <Typography variant="caption" sx={{
+              color: theme.palette.text.secondary,
+              fontSize: "14px",
+              fontWeight: 500,
+              pl: 1
+            }}>
+              Column Filters Active: {columnFilters.length}
+            </Typography>
+            {(columnFilters.length > 0 || globalFilter) && (
+              <Typography
+                variant="caption"
+                sx={{
+                  cursor: "pointer",
+                  color: theme.palette.primary.main,
+                  textDecoration: "underline",
+                  fontSize: "14px",
+                }}
+                onClick={clearAllFilters}
+              >
+                Clear All Filters
+              </Typography>
+            )}
+          </Box>
+        )}
+        {renderCustomActions && renderCustomActions()}
+      </Box>
+    ),
   }), [
     columns,
-    tableData,
-    virtualizationOptions,
-    enableSearch,
+    processedData,
+    originalData,
+    hasActiveFilters,
+    enableVirtualization,
+    virtualItemSize,
+    overscan,
     enablePagination,
+    enableSearch,
     enableColumnFilters,
     enableSorting,
     enableTopToolbar,
     onDrag,
-    enableFacetedValues,
-    enableGlobalFilterModes,
-    enableColumnFilterModes,
     density,
-    enableVirtualization,
-    searchableTextKey,
+    columnFilterDisplayMode,
     debouncedSearch,
     isLoading,
     columnFilters,
     globalFilter,
     sorting,
-    pagination,
-    stylingOptions,
-    customToolbar,
-    columnFilterDisplayMode,
-    paginationDisplayMode,
-    pageSizeOptions,
-  ]);
+    searchPlaceholder,
+    isSmallScreen,
+    type,
+    borderPadding,
+    minHgt,
+    wdth,
+    hgt,
+    subTitle,
+    renderCustomActions,
+    actionData,
+    handleRowClick,
+    clearAllFilters,
+  ]); // Removed 'theme' from dependency array as it's an imported constant
 
   const table = useMaterialReactTable(tableConfig);
 
@@ -639,8 +609,6 @@ const DataTable = memo(({
       <MaterialReactTable table={table} />
     </Box>
   );
-});
-
-DataTable.displayName = 'DataTable';
+};
 
 export default DataTable;
