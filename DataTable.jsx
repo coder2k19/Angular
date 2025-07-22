@@ -289,7 +289,7 @@ const DataTable = ({
     enableColumnFilters: enableColumnFilters,
     enableSorting: enableSorting,
     enableTopToolbar: enableTopToolbar,
-    enableBottomToolbar: enablePagination,
+    enableBottomToolbar: true, // Always enable to show row count
     positionToolbarAlertBanner: "bottom",
     enableColumnOrdering: onDrag,
     enableColumnDragging: false,
@@ -424,13 +424,17 @@ const DataTable = ({
       }),
     },
 
-    muiBottomToolbarProps: enablePagination ? {
+    muiBottomToolbarProps: {
       sx: {
         boxShadow: "none",
         backgroundColor: theme.palette.common.white,
         minHeight: minHgt ? minHgt : "3rem",
+        position: "relative", // Ensure proper positioning for absolute children
+        display: "flex",
+        alignItems: "center",
+        justifyContent: enablePagination ? "space-between" : "flex-end",
       },
-    } : undefined,
+    },
 
     muiTableBodyCellProps: {
       sx: {
@@ -478,41 +482,6 @@ const DataTable = ({
             {subTitle}
           </Typography>
         )}
-        
-        {/* Show row count stats */}
-        <Box display="flex" gap={2} alignItems="center" sx={{ mb: 1 }}>
-          <Typography 
-            variant="body2" 
-            sx={{
-              color: theme.palette.text.primary,
-              fontSize: "14px",
-              fontWeight: 600,
-            }}
-          >
-            {hasActiveFilters ? (
-              <>
-                Showing {processedData.length.toLocaleString()} of {originalData.length.toLocaleString()} rows
-              </>
-            ) : (
-              <>
-                Total Rows: {originalData.length.toLocaleString()}
-              </>
-            )}
-          </Typography>
-          
-          {hasActiveFilters && (
-            <Typography
-              variant="caption"
-              sx={{
-                color: theme.palette.warning.main,
-                fontSize: "12px",
-                fontStyle: "italic",
-              }}
-            >
-              (Filtered)
-            </Typography>
-          )}
-        </Box>
 
         {enableColumnFilters && (
           <Box display="flex" gap={1} alignItems="center">
@@ -541,6 +510,55 @@ const DataTable = ({
           </Box>
         )}
         {renderCustomActions && renderCustomActions()}
+      </Box>
+    ),
+
+    // Custom bottom toolbar actions for row count
+    renderBottomToolbarCustomActions: () => (
+      <Box 
+        display="flex" 
+        alignItems="center" 
+        justifyContent="flex-end"
+        sx={{ 
+          position: "absolute",
+          right: 16,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 1,
+        }}
+      >
+        <Typography 
+          variant="body2" 
+          sx={{
+            color: theme.palette.text.primary,
+            fontSize: "14px",
+            fontWeight: 600,
+            mr: 2,
+          }}
+        >
+          {hasActiveFilters ? (
+            <>
+              Showing {processedData.length.toLocaleString()} of {originalData.length.toLocaleString()} rows
+            </>
+          ) : (
+            <>
+              Total Rows: {originalData.length.toLocaleString()}
+            </>
+          )}
+        </Typography>
+        
+        {hasActiveFilters && (
+          <Typography
+            variant="caption"
+            sx={{
+              color: theme.palette.warning.main,
+              fontSize: "12px",
+              fontStyle: "italic",
+            }}
+          >
+            (Filtered)
+          </Typography>
+        )}
       </Box>
     ),
   }), [
